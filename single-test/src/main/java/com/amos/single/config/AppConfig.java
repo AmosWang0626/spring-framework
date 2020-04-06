@@ -1,4 +1,4 @@
-package com.amos.single;
+package com.amos.single.config;
 
 import org.springframework.context.annotation.ComponentScan;
 
