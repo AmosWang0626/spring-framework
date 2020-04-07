@@ -545,6 +545,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 				// 检查侦听器bean并注册它们。Check for listener beans and register them.
 				registerListeners();
 
+				// 重点：该方法完成了Spring单例对象的初始化
 				// 实例化所有剩余的（非延迟初始化）单例。Instantiate all remaining (non-lazy-init) singletons.
 				finishBeanFactoryInitialization(beanFactory);
 
@@ -873,6 +874,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		// Allow for caching all bean definition metadata, not expecting further changes.
 		beanFactory.freezeConfiguration();
 
+		// 实例化单例对象(非懒加载)
 		// Instantiate all remaining (non-lazy-init) singletons.
 		beanFactory.preInstantiateSingletons();
 	}

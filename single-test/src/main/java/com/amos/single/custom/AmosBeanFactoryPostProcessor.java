@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component;
  * @author amos.wang
  * @date 2020/4/7 14:24
  */
-@Component
+/*@Component*/
 public class AmosBeanFactoryPostProcessor implements BeanFactoryPostProcessor {
 
 	@Override
