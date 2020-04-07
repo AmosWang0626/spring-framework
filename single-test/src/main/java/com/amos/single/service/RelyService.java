@@ -6,24 +6,25 @@ import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 
 /**
- * DESCRIPTION: IndexService
+ * DESCRIPTION: RelyService
  *
  * @author amos.wang
  * @date 2020/3/24 13:34
  */
 @Component
-public class IndexService {
+public class RelyService {
 
 	@Resource
-	private RelyService relyService;
+	private IndexService indexService;
 
-	public IndexService() {
+	public RelyService() {
 		System.out.println("init " + this.getClass().getName());
 	}
 
-	public RelyService getRelyService() {
-		return relyService;
+	public IndexService getIndexService() {
+		return indexService;
 	}
+
 
 	@PostConstruct
 	public void cycleInitCallback() {

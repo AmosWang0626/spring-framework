@@ -244,7 +244,15 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 		final String beanName = transformedBeanName(name);
 		Object bean;
 
-		// Eagerly check singleton cache for manually registered singletons.
+		/*
+		 * 这里是第一次调用 getSingleton，下边还会再调用一次
+		 * 但是两次调用的不是同一个方法，而是方法的重载
+		 * 1.spring 在单例池中根据名字获取这个 bean，单例池就是一个 map，如果创建了就返回
+		 * 2.第一次扫描为什么也要 getSingleton 呢 ?
+		 * 2.1 第一重意思 (判断 spring 当前正准备初始化的 bean 有没有提前被 put 到容器)
+		 * 2.2 第二重意思 (判断) TODO XXX
+		 */
+		// 认真检查单例缓存是否有手动注册的单例。Eagerly check singleton cache for manually registered singletons.
 		Object sharedInstance = getSingleton(beanName);
 		if (sharedInstance != null && args == null) {
 			if (logger.isTraceEnabled()) {
@@ -262,6 +270,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 		else {
 			// Fail if we're already creating this bean instance:
 			// We're assumably within a circular reference.
+			// 和循环依赖有关，Prototype判断是否正在创建
 			if (isPrototypeCurrentlyInCreation(beanName)) {
 				throw new BeanCurrentlyInCreationException(beanName);
 			}
@@ -270,6 +279,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 			BeanFactory parentBeanFactory = getParentBeanFactory();
 			if (parentBeanFactory != null && !containsBeanDefinition(beanName)) {
 				// Not found -> check parent.
+				// 方法注入
 				String nameToLookup = originalBeanName(name);
 				if (parentBeanFactory instanceof AbstractBeanFactory) {
 					return ((AbstractBeanFactory) parentBeanFactory).doGetBean(
