@@ -249,8 +249,11 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 		 * 但是两次调用的不是同一个方法，而是方法的重载
 		 * 1.spring 在单例池中根据名字获取这个 bean，单例池就是一个 map，如果创建了就返回
 		 * 2.第一次扫描为什么也要 getSingleton 呢 ?
-		 * 2.1 第一重意思 (判断 spring 当前正准备初始化的 bean 有没有提前被 put 到容器)
-		 * 2.2 第二重意思 (判断) TODO XXX
+		 * 2.1 判断 spring 当前正准备初始化的 bean 有没有提前手动 put 到容器中
+		 * 2.2 这个方法不只初始化才会被调用。
+		 * >>>>> 循环依赖时，A 依赖 B。
+		 * >>>>> A 初始化时，会先把依赖的 B 给初始化了；
+		 * >>>>> 下次 B 初始化时，getSingleton 就可以直接拿到了
 		 */
 		// 认真检查单例缓存是否有手动注册的单例。Eagerly check singleton cache for manually registered singletons.
 		Object sharedInstance = getSingleton(beanName);
