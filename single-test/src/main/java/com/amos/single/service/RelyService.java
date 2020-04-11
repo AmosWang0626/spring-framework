@@ -22,6 +22,7 @@ public class RelyService {
 	}
 
 	public IndexService getIndexService() {
+		System.out.println(this.getClass().getSimpleName() + "#" + Thread.currentThread().getStackTrace()[1].getMethodName());
 		return indexService;
 	}
 
