@@ -501,7 +501,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 
 		try {
 			// Give BeanPostProcessors a chance to return a proxy instead of the target bean instance.
-			// 第一次调用后置处理器（处理实例化之前的事宜）
+			// 第一次调用后置处理器——判断要不要加代理
 			Object bean = resolveBeforeInstantiation(beanName, mbdToUse);
 			if (bean != null) {
 				return bean;
@@ -554,6 +554,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			instanceWrapper = this.factoryBeanInstanceCache.remove(beanName);
 		}
 		if (instanceWrapper == null) {
+			// 后置处理器大量使用 策略模式
 			// 这里边第二次调用后置处理器（实例化空的对象）
 			instanceWrapper = createBeanInstance(beanName, mbd, args);
 		}
@@ -567,7 +568,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		synchronized (mbd.postProcessingLock) {
 			if (!mbd.postProcessed) {
 				try {
-					// 第三次调用后置处理器
+					// 第三次调用后置处理器（拿到所有要注入的属性）
 					applyMergedBeanDefinitionPostProcessors(mbd, beanType, beanName);
 				}
 				catch (Throwable ex) {
@@ -1194,6 +1195,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		}
 
 		// Candidate constructors for autowiring?
+		// 第二次调用后置处理器（推断构造方法）
 		Constructor<?>[] ctors = determineConstructorsFromBeanPostProcessors(beanClass, beanName);
 		if (ctors != null || mbd.getResolvedAutowireMode() == AUTOWIRE_CONSTRUCTOR ||
 				mbd.hasConstructorArgumentValues() || !ObjectUtils.isEmpty(args)) {
@@ -1379,6 +1381,9 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		// Give any InstantiationAwareBeanPostProcessors the opportunity to modify the
 		// state of the bean before properties are set. This can be used, for example,
 		// to support styles of field injection.
+		// 如果有一个后置处理器实现了 InstantiationAwareBeanPostProcessor，
+		// 并且实现方法：postProcessAfterInstantiation return false;
+		// 那么请看下边for循环逻辑，直接return了，不会执行后续注入逻辑了
 		if (!mbd.isSynthetic() && hasInstantiationAwareBeanPostProcessors()) {
 			for (BeanPostProcessor bp : getBeanPostProcessors()) {
 				if (bp instanceof InstantiationAwareBeanPostProcessor) {
@@ -1773,12 +1778,13 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			}, getAccessControlContext());
 		}
 		else {
+			// 完成部分Aware
 			invokeAwareMethods(beanName, bean);
 		}
 
 		Object wrappedBean = bean;
 		if (mbd == null || !mbd.isSynthetic()) {
-			// 执行生命周期回调 @PostConstruct
+			// 执行生命周期回调 @PostConstruct ApplicationContextAware#setApplicationContext
 			wrappedBean = applyBeanPostProcessorsBeforeInitialization(wrappedBean, beanName);
 		}
 

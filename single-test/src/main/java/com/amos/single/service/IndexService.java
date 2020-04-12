@@ -1,6 +1,9 @@
 package com.amos.single.service;
 
+import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
@@ -13,7 +16,7 @@ import javax.annotation.Resource;
  * @date 2020/3/24 13:34
  */
 @Component
-public class IndexService implements InitializingBean {
+public class IndexService implements InitializingBean, ApplicationContextAware {
 
 	@Resource
 	private RelyService relyService;
@@ -37,4 +40,9 @@ public class IndexService implements InitializingBean {
 		System.out.println(this.getClass().getName() + "生命周期初始化回调方法 InitializingBean#afterPropertiesSet");
 	}
 
+	@Override
+	public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+		System.out.println(this.getClass().getName() + "#setApplicationContext");
+		System.out.println(">>>>>>>>>> relyService: " + relyService);
+	}
 }
