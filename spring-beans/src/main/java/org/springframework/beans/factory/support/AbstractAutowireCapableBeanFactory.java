@@ -425,7 +425,6 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			throws BeansException {
 
 		Object result = existingBean;
-		// 获取所有后置处理器；经过 AnnotationAwareAspectJAutoProxyCreator，将原始 Object 转换成 代理对象
 		for (BeanPostProcessor processor : getBeanPostProcessors()) {
 			Object current = processor.postProcessAfterInitialization(result, beanName);
 			if (current == null) {
@@ -514,7 +513,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		}
 
 		try {
-			// 执行创建Bean
+			// 执行创建Bean（方法里会执行一系列后置处理器）
 			Object beanInstance = doCreateBean(beanName, mbdToUse, args);
 			if (logger.isTraceEnabled()) {
 				logger.trace("Finished creating instance of bean '" + beanName + "'");
@@ -589,8 +588,9 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 				logger.trace("Eagerly caching bean '" + beanName +
 						"' to allow for resolving potential circular references");
 			}
-			// 第四次调用后置处理器，判断是否需要AOP
+			// 第四次调用后置处理器
 			// 允许循环依赖时，此处会将空对象 bean 封装成 ObjectFactory，放到二级缓存中
+			// 如果 Object 需要被 AOP，在这里会把 AOP 代理后的对象封装成 ObjectFactory
 			addSingletonFactory(beanName, () -> getEarlyBeanReference(beanName, mbd, bean));
 		}
 
@@ -600,7 +600,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			// 填充属性，也就是说我们常说的依赖注入
 			// 里面会完成第五次、第六次后置处理器的调用
 			populateBean(beanName, mbd, instanceWrapper);
-			// 初始化spring，完成 AOP 切面
+			// 初始化Bean，执行生命周期回调
 			// 里边会进行第七次、第八次后置处理器的调用
 			exposedObject = initializeBean(beanName, exposedObject, mbd);
 		}
@@ -943,6 +943,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 	}
 
 	/**
+	 * 获取早期的 Bean 引用。如果对象需要被AOP代理，则返回代理对象(当然默认为 CGLIB 代理对象)
 	 * Obtain a reference for early access to the specified bean,
 	 * typically for the purpose of resolving a circular reference.
 	 * @param beanName the name of the bean (for error handling purposes)
@@ -956,6 +957,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			for (BeanPostProcessor bp : getBeanPostProcessors()) {
 				if (bp instanceof SmartInstantiationAwareBeanPostProcessor) {
 					SmartInstantiationAwareBeanPostProcessor ibp = (SmartInstantiationAwareBeanPostProcessor) bp;
+					// 获取代理对象
 					exposedObject = ibp.getEarlyBeanReference(exposedObject, beanName);
 				}
 			}
@@ -1790,7 +1792,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 					beanName, "Invocation of init method failed", ex);
 		}
 		if (mbd == null || !mbd.isSynthetic()) {
-			// AOP 关键一步
+			// TODO 还是不知道这步干啥的
 			wrappedBean = applyBeanPostProcessorsAfterInitialization(wrappedBean, beanName);
 		}
 
