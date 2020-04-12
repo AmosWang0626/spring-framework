@@ -31,4 +31,7 @@ rootProject.children.each {project ->
 }
 // 引入自己的模块
 include 'single-test'
+include 'i-aop'
+include 'i-base'
+include 'i-cycle-ref'
 
