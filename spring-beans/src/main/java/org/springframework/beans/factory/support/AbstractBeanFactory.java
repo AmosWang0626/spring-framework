@@ -273,7 +273,8 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 		else {
 			// Fail if we're already creating this bean instance:
 			// We're assumably within a circular reference.
-			// 和循环依赖有关，Prototype判断是否正在创建
+			// 当scope为prototype时，会去判断对象是否在创建中
+			// 在创建中，则会抛异常，再次说明了原型对象是不支持循环依赖的
 			if (isPrototypeCurrentlyInCreation(beanName)) {
 				throw new BeanCurrentlyInCreationException(beanName);
 			}

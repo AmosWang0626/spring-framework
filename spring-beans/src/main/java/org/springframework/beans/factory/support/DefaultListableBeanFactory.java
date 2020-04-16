@@ -822,7 +822,8 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 
 		// Trigger initialization of all non-lazy singleton beans...
 		for (String beanName : beanNames) {
-			// bd 不存在就创建
+			// 普通Bean在Spring加载Bean定义的时候，实例化的是GenericBeanDefinition
+			// Spring上下文中用到的Bean是RootBeanDefinition，这个时候就要做下Merge
 			RootBeanDefinition bd = getMergedLocalBeanDefinition(beanName);
 			// 单例（非抽象、非懒加载BeanDefinition）
 			if (!bd.isAbstract() && bd.isSingleton() && !bd.isLazyInit()) {
@@ -840,6 +841,7 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 							isEagerInit = (factory instanceof SmartFactoryBean &&
 									((SmartFactoryBean<?>) factory).isEagerInit());
 						}
+						// 是否立即加载
 						if (isEagerInit) {
 							getBean(beanName);
 						}
