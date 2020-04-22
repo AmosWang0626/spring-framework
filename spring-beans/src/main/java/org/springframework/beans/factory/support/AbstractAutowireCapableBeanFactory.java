@@ -449,6 +449,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 	public Object resolveBeanByName(String name, DependencyDescriptor descriptor) {
 		InjectionPoint previousInjectionPoint = ConstructorResolver.setCurrentInjectionPoint(descriptor);
 		try {
+			// 依赖注入 [ inject → getBean ] —— 核心逻辑6
 			return getBean(name, descriptor.getDependencyType());
 		}
 		finally {
@@ -568,7 +569,8 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		synchronized (mbd.postProcessingLock) {
 			if (!mbd.postProcessed) {
 				try {
-					// 第三次调用后置处理器（拿到所有要注入的属性）
+					// 第三次调用后置处理器
+					// 简单缓存下要注入的属性，不同的后置处理器有不同的实现 CommonAnnotationBeanPostProcessor、AutowiredAnnotationBeanPostProcessor等
 					applyMergedBeanDefinitionPostProcessors(mbd, beanType, beanName);
 				}
 				catch (Throwable ex) {

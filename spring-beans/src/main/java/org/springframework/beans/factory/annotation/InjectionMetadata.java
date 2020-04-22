@@ -87,6 +87,7 @@ public class InjectionMetadata {
 				if (logger.isTraceEnabled()) {
 					logger.trace("Processing injected element of bean '" + beanName + "': " + element);
 				}
+				// 依赖注入 [ inject → getBean ] —— 核心逻辑1
 				element.inject(target, beanName, pvs);
 			}
 		}
@@ -177,6 +178,7 @@ public class InjectionMetadata {
 			if (this.isField) {
 				Field field = (Field) this.member;
 				ReflectionUtils.makeAccessible(field);
+				// 依赖注入 [ inject → getBean ] —— 核心逻辑2 CommonAnnotationBeanPostProcessor#ResourceElement
 				field.set(target, getResourceToInject(target, requestingBeanName));
 			}
 			else {
