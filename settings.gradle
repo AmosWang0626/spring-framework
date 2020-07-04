@@ -33,4 +33,5 @@ rootProject.children.each {project ->
 include 'i-aop'
 include 'i-base'
 include 'i-cycle-ref'
+include 'i-boot'
 
