@@ -18,10 +18,17 @@ public class SchoolContext {
 
 	@Autowired
 	private Map<String, SchoolStrategy> schoolStrategyMap;
+	@Autowired
+	private SimpleBean simpleBean;
+
+	public SchoolContext() {
+		System.out.println(this.getClass());
+	}
 
 	@PostConstruct
-	public void hello() {
-		System.out.println(this.getClass() + " >>>>>>> " + schoolStrategyMap.size());
+	public void post() {
+		System.out.println(this.getClass() + " >>>>>>> post >>>>>>> " + schoolStrategyMap.size());
+		System.out.println(this.getClass() + " >>>>>>> post >>>>>>> " + simpleBean.getClass());
 	}
 
 }

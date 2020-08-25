@@ -3,6 +3,8 @@ package com.amos.base.strategy.impl;
 import com.amos.base.strategy.SchoolStrategy;
 import org.springframework.stereotype.Component;
 
+import javax.annotation.PostConstruct;
+
 /**
  * 模块名称: spring
  * 模块描述: 校长
@@ -12,6 +14,7 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class SchoolMaster implements SchoolStrategy {
+
 	public SchoolMaster() {
 		System.out.println(this.getClass());
 	}
@@ -19,5 +22,10 @@ public class SchoolMaster implements SchoolStrategy {
 	@Override
 	public String sayHello(String name) {
 		return "Hello, " + name + "校长!";
+	}
+
+	@PostConstruct
+	public void post() {
+		System.out.println("PostConstruct " + this.getClass());
 	}
 }
