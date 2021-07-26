@@ -3,9 +3,7 @@ plugins {
 }
 
 group 'org.springframework'
-version '5.1.15.BUILD-SNAPSHOT'
-
-sourceCompatibility = 1.8
+version '5.3.10-SNAPSHOT'
 
 repositories {
     mavenCentral()
@@ -13,6 +11,11 @@ repositories {
 
 dependencies {
     compile(project(":spring-context"))
-    optional("org.aspectj:aspectjweaver:${aspectjVersion}")
-    testCompile group: 'junit', name: 'junit', version: '4.12'
+    compile("org.aspectj:aspectjweaver")
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.0'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.0'
+}
+
+test {
+    useJUnitPlatform()
 }

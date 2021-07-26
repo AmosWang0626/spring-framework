@@ -56,3 +56,8 @@ settings.gradle.projectsLoaded {
 		}
 	}
 }
+
+include 'i-aop'
+include 'i-base'
+include 'i-boot'
+include 'i-cycle-ref'
