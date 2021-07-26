@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,9 +17,10 @@ package org.springframework.core.io.buffer;
 
 import java.nio.charset.StandardCharsets;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.fail;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Unit tests for {@link LimitedDataBufferList}.
@@ -28,27 +29,21 @@ import static org.junit.Assert.fail;
  */
 public class LimitedDataBufferListTests {
 
-	private final static DataBufferFactory bufferFactory = new DefaultDataBufferFactory();
-
-
 	@Test
-	public void limitEnforced() {
-		try {
-			new LimitedDataBufferList(5).add(toDataBuffer("123456"));
-			fail();
-		}
-		catch (DataBufferLimitException ex) {
-			// Expected
-		}
+	void limitEnforced() {
+		LimitedDataBufferList list = new LimitedDataBufferList(5);
+
+		assertThatThrownBy(() -> list.add(toDataBuffer("123456"))).isInstanceOf(DataBufferLimitException.class);
+		assertThat(list).isEmpty();
 	}
 
 	@Test
-	public void limitIgnored() {
+	void limitIgnored() {
 		new LimitedDataBufferList(-1).add(toDataBuffer("123456"));
 	}
 
 	@Test
-	public void clearResetsCount() {
+	void clearResetsCount() {
 		LimitedDataBufferList list = new LimitedDataBufferList(5);
 		list.add(toDataBuffer("12345"));
 		list.clear();
@@ -57,7 +52,8 @@ public class LimitedDataBufferListTests {
 
 
 	private static DataBuffer toDataBuffer(String value) {
-		return bufferFactory.wrap(value.getBytes(StandardCharsets.UTF_8));
+		byte[] bytes = value.getBytes(StandardCharsets.UTF_8);
+		return DefaultDataBufferFactory.sharedInstance.wrap(bytes);
 	}
 
 }

@@ -51,7 +51,7 @@ import org.springframework.util.MimeType;
  * {@code "application/x-protobuf"} and {@code "application/octet-stream"} with the official
  * {@code "com.google.protobuf:protobuf-java"} library.
  *
- * @author Sébastien Deleuze
+ * @author Sebastien Deleuze
  * @since 5.1
  * @see ProtobufDecoder
  */
@@ -73,29 +73,39 @@ public class ProtobufEncoder extends ProtobufCodecSupport implements HttpMessage
 	public Flux<DataBuffer> encode(Publisher<? extends Message> inputStream, DataBufferFactory bufferFactory,
 			ResolvableType elementType, @Nullable MimeType mimeType, @Nullable Map<String, Object> hints) {
 
-		return Flux.from(inputStream)
-				.map(message -> {
-					DataBuffer buffer = bufferFactory.allocateBuffer();
-					boolean release = true;
-					try {
-						if (!(inputStream instanceof Mono)) {
-							message.writeDelimitedTo(buffer.asOutputStream());
-						}
-						else {
-							message.writeTo(buffer.asOutputStream());
-						}
-						release = false;
-						return buffer;
-					}
-					catch (IOException ex) {
-						throw new IllegalStateException("Unexpected I/O error while writing to data buffer", ex);
-					}
-					finally {
-						if (release) {
-							DataBufferUtils.release(buffer);
-						}
-					}
-				});
+		return Flux.from(inputStream).map(message ->
+				encodeValue(message, bufferFactory, !(inputStream instanceof Mono)));
+	}
+
+	@Override
+	public DataBuffer encodeValue(Message message, DataBufferFactory bufferFactory,
+			ResolvableType valueType, @Nullable MimeType mimeType, @Nullable Map<String, Object> hints) {
+
+		return encodeValue(message, bufferFactory, false);
+	}
+
+	private DataBuffer encodeValue(Message message, DataBufferFactory bufferFactory, boolean delimited) {
+
+		DataBuffer buffer = bufferFactory.allocateBuffer();
+		boolean release = true;
+		try {
+			if (delimited) {
+				message.writeDelimitedTo(buffer.asOutputStream());
+			}
+			else {
+				message.writeTo(buffer.asOutputStream());
+			}
+			release = false;
+			return buffer;
+		}
+		catch (IOException ex) {
+			throw new IllegalStateException("Unexpected I/O error while writing to data buffer", ex);
+		}
+		finally {
+			if (release) {
+				DataBufferUtils.release(buffer);
+			}
+		}
 	}
 
 	@Override

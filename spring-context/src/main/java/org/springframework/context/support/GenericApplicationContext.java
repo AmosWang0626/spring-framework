@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,6 +36,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.core.io.support.ResourcePatternResolver;
+import org.springframework.core.metrics.ApplicationStartup;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
@@ -156,6 +157,12 @@ public class GenericApplicationContext extends AbstractApplicationContext implem
 	public void setParent(@Nullable ApplicationContext parent) {
 		super.setParent(parent);
 		this.beanFactory.setParentBeanFactory(getInternalParentBeanFactory());
+	}
+
+	@Override
+	public void setApplicationStartup(ApplicationStartup applicationStartup) {
+		super.setApplicationStartup(applicationStartup);
+		this.beanFactory.setApplicationStartup(applicationStartup);
 	}
 
 	/**
@@ -357,6 +364,40 @@ public class GenericApplicationContext extends AbstractApplicationContext implem
 	//---------------------------------------------------------------------
 	// Convenient methods for registering individual beans
 	//---------------------------------------------------------------------
+
+	/**
+	 * Register a bean from the given bean class, optionally providing explicit
+	 * constructor arguments for consideration in the autowiring process.
+	 * @param beanClass the class of the bean
+	 * @param constructorArgs custom argument values to be fed into Spring's
+	 * constructor resolution algorithm, resolving either all arguments or just
+	 * specific ones, with the rest to be resolved through regular autowiring
+	 * (may be {@code null} or empty)
+	 * @since 5.2 (since 5.0 on the AnnotationConfigApplicationContext subclass)
+	 */
+	public <T> void registerBean(Class<T> beanClass, Object... constructorArgs) {
+		registerBean(null, beanClass, constructorArgs);
+	}
+
+	/**
+	 * Register a bean from the given bean class, optionally providing explicit
+	 * constructor arguments for consideration in the autowiring process.
+	 * @param beanName the name of the bean (may be {@code null})
+	 * @param beanClass the class of the bean
+	 * @param constructorArgs custom argument values to be fed into Spring's
+	 * constructor resolution algorithm, resolving either all arguments or just
+	 * specific ones, with the rest to be resolved through regular autowiring
+	 * (may be {@code null} or empty)
+	 * @since 5.2 (since 5.0 on the AnnotationConfigApplicationContext subclass)
+	 */
+	public <T> void registerBean(@Nullable String beanName, Class<T> beanClass, Object... constructorArgs) {
+		registerBean(beanName, beanClass, (Supplier<T>) null,
+				bd -> {
+					for (Object arg : constructorArgs) {
+						bd.getConstructorArgumentValues().addGenericArgumentValue(arg);
+					}
+				});
+	}
 
 	/**
 	 * Register a bean from the given bean class, optionally customizing its

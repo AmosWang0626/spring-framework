@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2017 the original author or authors.
+ * Copyright 2002-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,7 +34,6 @@ import org.springframework.beans.BeansException;
 import org.springframework.beans.MutablePropertyValues;
 import org.springframework.beans.factory.config.RuntimeBeanReference;
 import org.springframework.beans.factory.support.ManagedList;
-import org.springframework.context.ApplicationEvent;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.context.support.ApplicationObjectSupport;
@@ -68,7 +67,6 @@ import org.springframework.web.servlet.support.RequestContextUtils;
 import org.springframework.web.servlet.theme.SessionThemeResolver;
 import org.springframework.web.servlet.theme.ThemeChangeInterceptor;
 import org.springframework.web.servlet.view.InternalResourceViewResolver;
-import org.springframework.web.servlet.view.ResourceBundleViewResolver;
 import org.springframework.web.util.WebUtils;
 
 /**
@@ -78,6 +76,7 @@ import org.springframework.web.util.WebUtils;
 public class ComplexWebApplicationContext extends StaticWebApplicationContext {
 
 	@Override
+	@SuppressWarnings("deprecation")
 	public void refresh() throws BeansException {
 		registerSingleton(DispatcherServlet.LOCALE_RESOLVER_BEAN_NAME, SessionLocaleResolver.class);
 		registerSingleton(DispatcherServlet.THEME_RESOLVER_BEAN_NAME, SessionThemeResolver.class);
@@ -127,7 +126,7 @@ public class ComplexWebApplicationContext extends StaticWebApplicationContext {
 		pvs = new MutablePropertyValues();
 		pvs.add("order", 0);
 		pvs.add("basename", "org.springframework.web.servlet.complexviews");
-		registerSingleton("viewResolver", ResourceBundleViewResolver.class, pvs);
+		registerSingleton("viewResolver", org.springframework.web.servlet.view.ResourceBundleViewResolver.class, pvs);
 
 		pvs = new MutablePropertyValues();
 		pvs.add("suffix", ".jsp");
@@ -520,15 +519,13 @@ public class ComplexWebApplicationContext extends StaticWebApplicationContext {
 	}
 
 
-	public static class TestApplicationListener implements ApplicationListener<ApplicationEvent> {
+	public static class TestApplicationListener implements ApplicationListener<RequestHandledEvent> {
 
 		public int counter = 0;
 
 		@Override
-		public void onApplicationEvent(ApplicationEvent event) {
-			if (event instanceof RequestHandledEvent) {
-				this.counter++;
-			}
+		public void onApplicationEvent(RequestHandledEvent event) {
+			this.counter++;
 		}
 	}
 

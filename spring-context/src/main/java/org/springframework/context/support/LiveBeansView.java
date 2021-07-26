@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2018 the original author or authors.
+ * Copyright 2002-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,15 +42,14 @@ import org.springframework.util.StringUtils;
  * local {@code LiveBeansView} bean definition) or all registered ApplicationContexts
  * (driven by the {@value #MBEAN_DOMAIN_PROPERTY_NAME} environment property).
  *
- * <p>Note: This feature is still in beta and primarily designed for use with
- * Spring Tool Suite 3.1 and higher.
- *
  * @author Juergen Hoeller
  * @author Stephane Nicoll
  * @since 3.2
  * @see #getSnapshotAsJson()
  * @see org.springframework.web.context.support.LiveBeansViewServlet
+ * @deprecated as of 5.3, in favor of using Spring Boot actuators for such needs
  */
+@Deprecated
 public class LiveBeansView implements LiveBeansViewMBean, ApplicationContextAware {
 
 	/**
@@ -206,12 +205,12 @@ public class LiveBeansView implements LiveBeansViewMBean, ApplicationContextAwar
 				}
 			}
 			result.append("]\n");
-			result.append("}");
+			result.append('}');
 			if (it.hasNext()) {
 				result.append(",\n");
 			}
 		}
-		result.append("]");
+		result.append(']');
 		return result.toString();
 	}
 

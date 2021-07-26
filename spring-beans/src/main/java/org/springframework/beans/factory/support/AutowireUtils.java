@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -51,15 +51,9 @@ import org.springframework.util.ClassUtils;
  */
 abstract class AutowireUtils {
 
-	private static final Comparator<Executable> EXECUTABLE_COMPARATOR = (e1, e2) -> {
-		boolean p1 = Modifier.isPublic(e1.getModifiers());
-		boolean p2 = Modifier.isPublic(e2.getModifiers());
-		if (p1 != p2) {
-			return (p1 ? -1 : 1);
-		}
-		int c1pl = e1.getParameterCount();
-		int c2pl = e2.getParameterCount();
-		return Integer.compare(c2pl, c1pl);
+	public static final Comparator<Executable> EXECUTABLE_COMPARATOR = (e1, e2) -> {
+		int result = Boolean.compare(Modifier.isPublic(e2.getModifiers()), Modifier.isPublic(e1.getModifiers()));
+		return result != 0 ? result : Integer.compare(e2.getParameterCount(), e1.getParameterCount());
 	};
 
 
@@ -103,7 +97,7 @@ abstract class AutowireUtils {
 		// It was declared by CGLIB, but we might still want to autowire it
 		// if it was actually declared by the superclass.
 		Class<?> superclass = wm.getDeclaringClass().getSuperclass();
-		return !ClassUtils.hasMethod(superclass, wm.getName(), wm.getParameterTypes());
+		return !ClassUtils.hasMethod(superclass, wm);
 	}
 
 	/**
@@ -118,8 +112,7 @@ abstract class AutowireUtils {
 		if (setter != null) {
 			Class<?> targetClass = setter.getDeclaringClass();
 			for (Class<?> ifc : interfaces) {
-				if (ifc.isAssignableFrom(targetClass) &&
-						ClassUtils.hasMethod(ifc, setter.getName(), setter.getParameterTypes())) {
+				if (ifc.isAssignableFrom(targetClass) && ClassUtils.hasMethod(ifc, setter)) {
 					return true;
 				}
 			}
@@ -279,23 +272,21 @@ abstract class AutowireUtils {
 
 		private final ObjectFactory<?> objectFactory;
 
-		public ObjectFactoryDelegatingInvocationHandler(ObjectFactory<?> objectFactory) {
+		ObjectFactoryDelegatingInvocationHandler(ObjectFactory<?> objectFactory) {
 			this.objectFactory = objectFactory;
 		}
 
 		@Override
 		public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-			String methodName = method.getName();
-			if (methodName.equals("equals")) {
-				// Only consider equal when proxies are identical.
-				return (proxy == args[0]);
-			}
-			else if (methodName.equals("hashCode")) {
-				// Use hashCode of proxy.
-				return System.identityHashCode(proxy);
-			}
-			else if (methodName.equals("toString")) {
-				return this.objectFactory.toString();
+			switch (method.getName()) {
+				case "equals":
+					// Only consider equal when proxies are identical.
+					return (proxy == args[0]);
+				case "hashCode":
+					// Use hashCode of proxy.
+					return System.identityHashCode(proxy);
+				case "toString":
+					return this.objectFactory.toString();
 			}
 			try {
 				return method.invoke(this.objectFactory.getObject(), args);

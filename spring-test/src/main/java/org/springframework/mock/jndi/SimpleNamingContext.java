@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2018 the original author or authors.
+ * Copyright 2002-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -51,7 +51,10 @@ import org.springframework.util.StringUtils;
  * @author Juergen Hoeller
  * @see SimpleNamingContextBuilder
  * @see org.springframework.jndi.JndiTemplate#createInitialContext
+ * @deprecated Deprecated as of Spring Framework 5.2 in favor of complete solutions from
+ * third parties such as <a href="https://github.com/h-thurow/Simple-JNDI">Simple-JNDI</a>
  */
+@Deprecated
 public class SimpleNamingContext implements Context {
 
 	private final Log logger = LogFactory.getLog(getClass());
@@ -123,7 +126,7 @@ public class SimpleNamingContext implements Context {
 		if (logger.isDebugEnabled()) {
 			logger.debug("Static JNDI lookup: [" + name + "]");
 		}
-		if ("".equals(name)) {
+		if (name.isEmpty()) {
 			return new SimpleNamingContext(this.root, this.boundObjects, this.environment);
 		}
 		Object found = this.boundObjects.get(name);
@@ -300,10 +303,10 @@ public class SimpleNamingContext implements Context {
 
 	private abstract static class AbstractNamingEnumeration<T> implements NamingEnumeration<T> {
 
-		private Iterator<T> iterator;
+		private final Iterator<T> iterator;
 
 		private AbstractNamingEnumeration(SimpleNamingContext context, String proot) throws NamingException {
-			if (!"".equals(proot) && !proot.endsWith("/")) {
+			if (!proot.isEmpty() && !proot.endsWith("/")) {
 				proot = proot + "/";
 			}
 			String root = context.root + proot;

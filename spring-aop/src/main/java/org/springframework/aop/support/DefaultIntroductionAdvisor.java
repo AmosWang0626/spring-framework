@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -71,7 +71,8 @@ public class DefaultIntroductionAdvisor implements IntroductionAdvisor, ClassFil
 		if (introductionInfo != null) {
 			Class<?>[] introducedInterfaces = introductionInfo.getInterfaces();
 			if (introducedInterfaces.length == 0) {
-				throw new IllegalArgumentException("IntroductionAdviceSupport implements no interfaces");
+				throw new IllegalArgumentException(
+						"IntroductionInfo defines no interfaces to introduce: " + introductionInfo);
 			}
 			for (Class<?> ifc : introducedInterfaces) {
 				addInterface(ifc);
@@ -150,7 +151,7 @@ public class DefaultIntroductionAdvisor implements IntroductionAdvisor, ClassFil
 
 
 	@Override
-	public boolean equals(Object other) {
+	public boolean equals(@Nullable Object other) {
 		if (this == other) {
 			return true;
 		}

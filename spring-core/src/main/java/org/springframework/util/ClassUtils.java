@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,6 +38,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.StringJoiner;
 
 import org.springframework.lang.Nullable;
 
@@ -64,14 +65,17 @@ public abstract class ClassUtils {
 	/** Prefix for internal non-primitive array class names: {@code "[L"}. */
 	private static final String NON_PRIMITIVE_ARRAY_PREFIX = "[L";
 
+	/** A reusable empty class array constant. */
+	private static final Class<?>[] EMPTY_CLASS_ARRAY = {};
+
 	/** The package separator character: {@code '.'}. */
 	private static final char PACKAGE_SEPARATOR = '.';
 
 	/** The path separator character: {@code '/'}. */
 	private static final char PATH_SEPARATOR = '/';
 
-	/** The inner class separator character: {@code '$'}. */
-	private static final char INNER_CLASS_SEPARATOR = '$';
+	/** The nested class separator character: {@code '$'}. */
+	private static final char NESTED_CLASS_SEPARATOR = '$';
 
 	/** The CGLIB class separator: {@code "$$"}. */
 	public static final String CGLIB_CLASS_SEPARATOR = "$$";
@@ -84,13 +88,13 @@ public abstract class ClassUtils {
 	 * Map with primitive wrapper type as key and corresponding primitive
 	 * type as value, for example: Integer.class -> int.class.
 	 */
-	private static final Map<Class<?>, Class<?>> primitiveWrapperTypeMap = new IdentityHashMap<>(8);
+	private static final Map<Class<?>, Class<?>> primitiveWrapperTypeMap = new IdentityHashMap<>(9);
 
 	/**
 	 * Map with primitive type as key and corresponding wrapper
 	 * type as value, for example: int.class -> Integer.class.
 	 */
-	private static final Map<Class<?>, Class<?>> primitiveTypeToWrapperMap = new IdentityHashMap<>(8);
+	private static final Map<Class<?>, Class<?>> primitiveTypeToWrapperMap = new IdentityHashMap<>(9);
 
 	/**
 	 * Map with primitive type name as key and corresponding primitive
@@ -137,7 +141,6 @@ public abstract class ClassUtils {
 		primitiveTypes.addAll(primitiveWrapperTypeMap.values());
 		Collections.addAll(primitiveTypes, boolean[].class, byte[].class, char[].class,
 				double[].class, float[].class, int[].class, long[].class, short[].class);
-		primitiveTypes.add(void.class);
 		for (Class<?> primitiveType : primitiveTypes) {
 			primitiveTypeNameMap.put(primitiveType.getName(), primitiveType);
 		}
@@ -229,7 +232,7 @@ public abstract class ClassUtils {
 	/**
 	 * Replacement for {@code Class.forName()} that also returns Class instances
 	 * for primitives (e.g. "int") and array class names (e.g. "String[]").
-	 * Furthermore, it is also capable of resolving inner class names in Java source
+	 * Furthermore, it is also capable of resolving nested class names in Java source
 	 * style (e.g. "java.lang.Thread.State" instead of "java.lang.Thread$State").
 	 * @param name the name of the Class
 	 * @param classLoader the class loader to use
@@ -283,10 +286,10 @@ public abstract class ClassUtils {
 		catch (ClassNotFoundException ex) {
 			int lastDotIndex = name.lastIndexOf(PACKAGE_SEPARATOR);
 			if (lastDotIndex != -1) {
-				String innerClassName =
-						name.substring(0, lastDotIndex) + INNER_CLASS_SEPARATOR + name.substring(lastDotIndex + 1);
+				String nestedClassName =
+						name.substring(0, lastDotIndex) + NESTED_CLASS_SEPARATOR + name.substring(lastDotIndex + 1);
 				try {
-					return Class.forName(innerClassName, false, clToUse);
+					return Class.forName(nestedClassName, false, clToUse);
 				}
 				catch (ClassNotFoundException ex2) {
 					// Swallow - let original exception get through
@@ -459,7 +462,7 @@ public abstract class ClassUtils {
 		Class<?> result = null;
 		// Most class names will be quite long, considering that they
 		// SHOULD sit in a package, so a length check is worthwhile.
-		if (name != null && name.length() <= 8) {
+		if (name != null && name.length() <= 7) {
 			// Could be a primitive - likely.
 			result = primitiveTypeNameMap.get(name);
 		}
@@ -532,7 +535,7 @@ public abstract class ClassUtils {
 	 * @param lhsType the target type
 	 * @param rhsType the value type that should be assigned to the target type
 	 * @return if the target type is assignable from the value type
-	 * @see TypeUtils#isAssignable
+	 * @see TypeUtils#isAssignable(java.lang.reflect.Type, java.lang.reflect.Type)
 	 */
 	public static boolean isAssignable(Class<?> lhsType, Class<?> rhsType) {
 		Assert.notNull(lhsType, "Left-hand side type must not be null");
@@ -542,17 +545,12 @@ public abstract class ClassUtils {
 		}
 		if (lhsType.isPrimitive()) {
 			Class<?> resolvedPrimitive = primitiveWrapperTypeMap.get(rhsType);
-			if (lhsType == resolvedPrimitive) {
-				return true;
-			}
+			return (lhsType == resolvedPrimitive);
 		}
 		else {
 			Class<?> resolvedWrapper = primitiveTypeToWrapperMap.get(rhsType);
-			if (resolvedWrapper != null && lhsType.isAssignableFrom(resolvedWrapper)) {
-				return true;
-			}
+			return (resolvedWrapper != null && lhsType.isAssignableFrom(resolvedWrapper));
 		}
-		return false;
 	}
 
 	/**
@@ -665,16 +663,11 @@ public abstract class ClassUtils {
 		if (CollectionUtils.isEmpty(classes)) {
 			return "[]";
 		}
-		StringBuilder sb = new StringBuilder("[");
-		for (Iterator<Class<?>> it = classes.iterator(); it.hasNext(); ) {
-			Class<?> clazz = it.next();
-			sb.append(clazz.getName());
-			if (it.hasNext()) {
-				sb.append(", ");
-			}
+		StringJoiner stringJoiner = new StringJoiner(", ", "[", "]");
+		for (Class<?> clazz : classes) {
+			stringJoiner.add(clazz.getName());
 		}
-		sb.append("]");
-		return sb.toString();
+		return stringJoiner.toString();
 	}
 
 	/**
@@ -685,8 +678,8 @@ public abstract class ClassUtils {
 	 * @since 3.1
 	 * @see StringUtils#toStringArray
 	 */
-	public static Class<?>[] toClassArray(Collection<Class<?>> collection) {
-		return collection.toArray(new Class<?>[0]);
+	public static Class<?>[] toClassArray(@Nullable Collection<Class<?>> collection) {
+		return (!CollectionUtils.isEmpty(collection) ? collection.toArray(EMPTY_CLASS_ARRAY) : EMPTY_CLASS_ARRAY);
 	}
 
 	/**
@@ -854,7 +847,9 @@ public abstract class ClassUtils {
 	 * @param object the object to check
 	 * @see #isCglibProxyClass(Class)
 	 * @see org.springframework.aop.support.AopUtils#isCglibProxy(Object)
+	 * @deprecated as of 5.2, in favor of custom (possibly narrower) checks
 	 */
+	@Deprecated
 	public static boolean isCglibProxy(Object object) {
 		return isCglibProxyClass(object.getClass());
 	}
@@ -863,7 +858,9 @@ public abstract class ClassUtils {
 	 * Check whether the specified class is a CGLIB-generated class.
 	 * @param clazz the class to check
 	 * @see #isCglibProxyClassName(String)
+	 * @deprecated as of 5.2, in favor of custom (possibly narrower) checks
 	 */
+	@Deprecated
 	public static boolean isCglibProxyClass(@Nullable Class<?> clazz) {
 		return (clazz != null && isCglibProxyClassName(clazz.getName()));
 	}
@@ -871,7 +868,9 @@ public abstract class ClassUtils {
 	/**
 	 * Check whether the specified class name is a CGLIB-generated class.
 	 * @param className the class name to check
+	 * @deprecated as of 5.2, in favor of custom (possibly narrower) checks
 	 */
+	@Deprecated
 	public static boolean isCglibProxyClassName(@Nullable String className) {
 		return (className != null && className.contains(CGLIB_CLASS_SEPARATOR));
 	}
@@ -918,14 +917,10 @@ public abstract class ClassUtils {
 		}
 		Class<?> clazz = value.getClass();
 		if (Proxy.isProxyClass(clazz)) {
-			StringBuilder result = new StringBuilder(clazz.getName());
-			result.append(" implementing ");
-			Class<?>[] ifcs = clazz.getInterfaces();
-			for (int i = 0; i < ifcs.length; i++) {
-				result.append(ifcs[i].getName());
-				if (i < ifcs.length - 1) {
-					result.append(',');
-				}
+			String prefix = clazz.getName() + " implementing ";
+			StringJoiner result = new StringJoiner(",", prefix, "");
+			for (Class<?> ifc : clazz.getInterfaces()) {
+				result.add(ifc.getName());
 			}
 			return result.toString();
 		}
@@ -958,7 +953,7 @@ public abstract class ClassUtils {
 			nameEndIndex = className.length();
 		}
 		String shortName = className.substring(lastDotIndex + 1, nameEndIndex);
-		shortName = shortName.replace(INNER_CLASS_SEPARATOR, PACKAGE_SEPARATOR);
+		shortName = shortName.replace(NESTED_CLASS_SEPARATOR, PACKAGE_SEPARATOR);
 		return shortName;
 	}
 
@@ -973,7 +968,7 @@ public abstract class ClassUtils {
 
 	/**
 	 * Return the short string name of a Java class in uncapitalized JavaBeans
-	 * property format. Strips the outer class name in case of an inner class.
+	 * property format. Strips the outer class name in case of a nested class.
 	 * @param clazz the class
 	 * @return the short name rendered in a standard JavaBeans property format
 	 * @see java.beans.Introspector#decapitalize(String)
@@ -1064,7 +1059,7 @@ public abstract class ClassUtils {
 	 * @param clazz the clazz to analyze
 	 * @param paramTypes the parameter types of the method
 	 * @return whether the class has a corresponding constructor
-	 * @see Class#getMethod
+	 * @see Class#getConstructor
 	 */
 	public static boolean hasConstructor(Class<?> clazz, Class<?>... paramTypes) {
 		return (getConstructorIfAvailable(clazz, paramTypes) != null);
@@ -1088,6 +1083,24 @@ public abstract class ClassUtils {
 		catch (NoSuchMethodException ex) {
 			return null;
 		}
+	}
+
+	/**
+	 * Determine whether the given class has a public method with the given signature.
+	 * @param clazz the clazz to analyze
+	 * @param method the method to look for
+	 * @return whether the class has a corresponding method
+	 * @since 5.2.3
+	 */
+	public static boolean hasMethod(Class<?> clazz, Method method) {
+		Assert.notNull(clazz, "Class must not be null");
+		Assert.notNull(method, "Method must not be null");
+		if (clazz == method.getDeclaringClass()) {
+			return true;
+		}
+		String methodName = method.getName();
+		Class<?>[] paramTypes = method.getParameterTypes();
+		return getMethodOrNull(clazz, methodName, paramTypes) != null;
 	}
 
 	/**
@@ -1129,13 +1142,7 @@ public abstract class ClassUtils {
 			}
 		}
 		else {
-			Set<Method> candidates = new HashSet<>(1);
-			Method[] methods = clazz.getMethods();
-			for (Method method : methods) {
-				if (methodName.equals(method.getName())) {
-					candidates.add(method);
-				}
-			}
+			Set<Method> candidates = findMethodCandidatesByName(clazz, methodName);
 			if (candidates.size() == 1) {
 				return candidates.iterator().next();
 			}
@@ -1166,21 +1173,10 @@ public abstract class ClassUtils {
 		Assert.notNull(clazz, "Class must not be null");
 		Assert.notNull(methodName, "Method name must not be null");
 		if (paramTypes != null) {
-			try {
-				return clazz.getMethod(methodName, paramTypes);
-			}
-			catch (NoSuchMethodException ex) {
-				return null;
-			}
+			return getMethodOrNull(clazz, methodName, paramTypes);
 		}
 		else {
-			Set<Method> candidates = new HashSet<>(1);
-			Method[] methods = clazz.getMethods();
-			for (Method method : methods) {
-				if (methodName.equals(method.getName())) {
-					candidates.add(method);
-				}
-			}
+			Set<Method> candidates = findMethodCandidatesByName(clazz, methodName);
 			if (candidates.size() == 1) {
 				return candidates.iterator().next();
 			}
@@ -1326,7 +1322,7 @@ public abstract class ClassUtils {
 	 * Note that, despite being synthetic, bridge methods ({@link Method#isBridge()}) are considered
 	 * as user-level methods since they are eventually pointing to a user-declared generic method.
 	 * @param method the method to check
-	 * @return {@code true} if the method can be considered as user-declared; [@code false} otherwise
+	 * @return {@code true} if the method can be considered as user-declared; {@code false} otherwise
 	 */
 	public static boolean isUserLevelMethod(Method method) {
 		Assert.notNull(method, "Method must not be null");
@@ -1372,6 +1368,28 @@ public abstract class ClassUtils {
 		catch (NoSuchMethodException ex) {
 			return null;
 		}
+	}
+
+
+	@Nullable
+	private static Method getMethodOrNull(Class<?> clazz, String methodName, Class<?>[] paramTypes) {
+		try {
+			return clazz.getMethod(methodName, paramTypes);
+		}
+		catch (NoSuchMethodException ex) {
+			return null;
+		}
+	}
+
+	private static Set<Method> findMethodCandidatesByName(Class<?> clazz, String methodName) {
+		Set<Method> candidates = new HashSet<>(1);
+		Method[] methods = clazz.getMethods();
+		for (Method method : methods) {
+			if (methodName.equals(method.getName())) {
+				candidates.add(method);
+			}
+		}
+		return candidates;
 	}
 
 }

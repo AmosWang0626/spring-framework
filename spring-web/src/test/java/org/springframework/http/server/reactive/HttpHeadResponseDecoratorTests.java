@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,16 +18,18 @@ package org.springframework.http.server.reactive;
 import java.nio.charset.StandardCharsets;
 
 import io.netty.buffer.PooledByteBufAllocator;
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 import org.springframework.core.io.buffer.DataBuffer;
-import org.springframework.core.io.buffer.LeakAwareDataBufferFactory;
 import org.springframework.core.io.buffer.NettyDataBufferFactory;
-import org.springframework.mock.http.server.reactive.test.MockServerHttpResponse;
+import org.springframework.core.testfixture.io.buffer.LeakAwareDataBufferFactory;
+import org.springframework.http.HttpHeaders;
+import org.springframework.web.testfixture.http.server.reactive.MockServerHttpResponse;
 
-import static org.junit.Assert.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Unit tests for {@link HttpHeadResponseDecorator}.
@@ -42,17 +44,24 @@ public class HttpHeadResponseDecoratorTests {
 			new HttpHeadResponseDecorator(new MockServerHttpResponse(this.bufferFactory));
 
 
-	@After
+	@AfterEach
 	public void tearDown() {
 		this.bufferFactory.checkForLeaks();
 	}
 
 
 	@Test
-	public void write() {
+	public void writeWithFlux() {
 		Flux<DataBuffer> body = Flux.just(toDataBuffer("data1"), toDataBuffer("data2"));
-		response.writeWith(body).block();
-		assertEquals(10, response.getHeaders().getContentLength());
+		this.response.writeWith(body).block();
+		assertThat(this.response.getHeaders().getContentLength()).isEqualTo(-1);
+	}
+
+	@Test
+	public void writeWithMono() {
+		Mono<DataBuffer> body = Mono.just(toDataBuffer("data1,data2"));
+		this.response.writeWith(body).block();
+		assertThat(this.response.getHeaders().getContentLength()).isEqualTo(11);
 	}
 
 	@Test // gh-23484
@@ -60,9 +69,16 @@ public class HttpHeadResponseDecoratorTests {
 		int length = 15;
 		this.response.getHeaders().setContentLength(length);
 		this.response.writeWith(Flux.empty()).block();
-		assertEquals(length, this.response.getHeaders().getContentLength());
+		assertThat(this.response.getHeaders().getContentLength()).isEqualTo(length);
 	}
 
+	@Test // gh-25908
+	public void writeWithGivenTransferEncoding() {
+		Flux<DataBuffer> body = Flux.just(toDataBuffer("data1"), toDataBuffer("data2"));
+		this.response.getHeaders().add(HttpHeaders.TRANSFER_ENCODING, "chunked");
+		this.response.writeWith(body).block();
+		assertThat(this.response.getHeaders().getContentLength()).isEqualTo(-1);
+	}
 
 	private DataBuffer toDataBuffer(String s) {
 		DataBuffer buffer = this.bufferFactory.allocateBuffer();

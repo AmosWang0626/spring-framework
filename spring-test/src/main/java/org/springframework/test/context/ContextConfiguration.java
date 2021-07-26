@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -75,16 +75,21 @@ import org.springframework.core.annotation.AliasFor;
  * <p>This annotation may be used as a <em>meta-annotation</em> to create custom
  * <em>composed annotations</em>.
  *
+ * <p>As of Spring Framework 5.3, this annotation will be inherited from an
+ * enclosing test class by default. See
+ * {@link NestedTestConfiguration @NestedTestConfiguration} for details.
+ *
  * @author Sam Brannen
  * @since 2.5
- * @see ContextHierarchy
- * @see ActiveProfiles
- * @see TestPropertySource
- * @see ContextLoader
+ * @see org.springframework.test.context.junit.jupiter.SpringJUnitConfig @SpringJUnitConfig
+ * @see org.springframework.test.context.junit.jupiter.web.SpringJUnitWebConfig @SpringJUnitWebConfig
+ * @see ContextHierarchy @ContextHierarchy
+ * @see ActiveProfiles @ActiveProfiles
+ * @see TestPropertySource @TestPropertySource
  * @see SmartContextLoader
  * @see ContextConfigurationAttributes
  * @see MergedContextConfiguration
- * @see org.springframework.context.ApplicationContext
+ * @see org.springframework.context.ApplicationContext ApplicationContext
  */
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)

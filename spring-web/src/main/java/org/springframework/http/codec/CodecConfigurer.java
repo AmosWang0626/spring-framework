@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -124,6 +124,22 @@ public interface CodecConfigurer {
 		void jackson2JsonEncoder(Encoder<?> encoder);
 
 		/**
+		 * Override the default Jackson Smile {@code Decoder}.
+		 * <p>Note that {@link #maxInMemorySize(int)}, if configured, will be
+		 * applied to the given decoder.
+		 * @param decoder the decoder instance to use
+		 * @see org.springframework.http.codec.json.Jackson2SmileDecoder
+		 */
+		void jackson2SmileDecoder(Decoder<?> decoder);
+
+		/**
+		 * Override the default Jackson Smile {@code Encoder}.
+		 * @param encoder the encoder instance to use
+		 * @see org.springframework.http.codec.json.Jackson2SmileEncoder
+		 */
+		void jackson2SmileEncoder(Encoder<?> encoder);
+
+		/**
 		 * Override the default Protobuf {@code Decoder}.
 		 * <p>Note that {@link #maxInMemorySize(int)}, if configured, will be
 		 * applied to the given decoder.
@@ -161,6 +177,33 @@ public interface CodecConfigurer {
 		void jaxb2Encoder(Encoder<?> encoder);
 
 		/**
+		 * Override the default Kotlin Serialization JSON {@code Decoder}.
+		 * @param decoder the decoder instance to use
+		 * @since 5.3
+		 * @see org.springframework.http.codec.json.KotlinSerializationJsonDecoder
+		 */
+		void kotlinSerializationJsonDecoder(Decoder<?> decoder);
+
+		/**
+		 * Override the default Kotlin Serialization JSON {@code Encoder}.
+		 * @param encoder the encoder instance to use
+		 * @since 5.3
+		 * @see org.springframework.http.codec.json.KotlinSerializationJsonEncoder
+		 */
+		void kotlinSerializationJsonEncoder(Encoder<?> encoder);
+
+		/**
+		 * Register a consumer to apply to default config instances. This can be
+		 * used to configure rather than replace a specific codec or multiple
+		 * codecs. The consumer is applied to every default {@link Encoder},
+		 * {@link Decoder}, {@link HttpMessageReader} and {@link HttpMessageWriter}
+		 * instance.
+		 * @param codecConsumer the consumer to apply
+		 * @since 5.3.4
+		 */
+		void configureDefaultCodec(Consumer<Object> codecConsumer);
+
+		/**
 		 * Configure a limit on the number of bytes that can be buffered whenever
 		 * the input stream needs to be aggregated. This can be a result of
 		 * decoding to a single {@code DataBuffer},
@@ -169,8 +212,7 @@ public interface CodecConfigurer {
 		 * It can also occur when splitting the input stream, e.g. delimited text,
 		 * in which case the limit applies to data buffered between delimiters.
 		 * <p>By default this is not set, in which case individual codec defaults
-		 * apply. In 5.1 most codecs are not limited except {@code FormHttpMessageReader}
-		 * which is limited to 256K. In 5.2 all codecs are limited to 256K by default.
+		 * apply. All codecs are limited to 256K by default.
 		 * @param byteCount the max number of bytes to buffer, or -1 for unlimited
 		 * @since 5.1.11
 		 */

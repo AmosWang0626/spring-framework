@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ import java.util.concurrent.Callable;
 
 import org.springframework.cache.Cache;
 import org.springframework.lang.Nullable;
-import org.springframework.transaction.support.TransactionSynchronizationAdapter;
+import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.util.Assert;
 
@@ -32,9 +32,9 @@ import org.springframework.util.Assert;
  * transaction. If no transaction is active, {@link #put}, {@link #evict} and
  * {@link #clear} operations will be performed immediately, as usual.
  *
- * <p><b>Note:</b> Use of immediate operations such as {@link #putIfAbsent}
- * cannot be deferred to the after-commit phase of a running transaction.
- * Use these with care in a transactional environment.
+ * <p><b>Note:</b> Use of immediate operations such as {@link #putIfAbsent} and
+ * {@link #evictIfPresent} cannot be deferred to the after-commit phase of a
+ * running transaction. Use these with care in a transactional environment.
  *
  * @author Juergen Hoeller
  * @author Stephane Nicoll
@@ -94,7 +94,7 @@ public class TransactionAwareCacheDecorator implements Cache {
 	@Override
 	public void put(final Object key, @Nullable final Object value) {
 		if (TransactionSynchronizationManager.isSynchronizationActive()) {
-			TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronizationAdapter() {
+			TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
 				@Override
 				public void afterCommit() {
 					TransactionAwareCacheDecorator.this.targetCache.put(key, value);
@@ -115,7 +115,7 @@ public class TransactionAwareCacheDecorator implements Cache {
 	@Override
 	public void evict(final Object key) {
 		if (TransactionSynchronizationManager.isSynchronizationActive()) {
-			TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronizationAdapter() {
+			TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
 				@Override
 				public void afterCommit() {
 					TransactionAwareCacheDecorator.this.targetCache.evict(key);
@@ -128,9 +128,14 @@ public class TransactionAwareCacheDecorator implements Cache {
 	}
 
 	@Override
+	public boolean evictIfPresent(Object key) {
+		return this.targetCache.evictIfPresent(key);
+	}
+
+	@Override
 	public void clear() {
 		if (TransactionSynchronizationManager.isSynchronizationActive()) {
-			TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronizationAdapter() {
+			TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
 				@Override
 				public void afterCommit() {
 					targetCache.clear();
@@ -140,6 +145,11 @@ public class TransactionAwareCacheDecorator implements Cache {
 		else {
 			this.targetCache.clear();
 		}
+	}
+
+	@Override
+	public boolean invalidate() {
+		return this.targetCache.invalidate();
 	}
 
 }

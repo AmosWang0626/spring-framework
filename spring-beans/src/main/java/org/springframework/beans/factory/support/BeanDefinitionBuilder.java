@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,8 +18,10 @@ package org.springframework.beans.factory.support;
 
 import java.util.function.Supplier;
 
+import org.springframework.beans.factory.config.AutowiredPropertyMarker;
 import org.springframework.beans.factory.config.BeanDefinitionCustomizer;
 import org.springframework.beans.factory.config.RuntimeBeanReference;
+import org.springframework.core.ResolvableType;
 import org.springframework.lang.Nullable;
 import org.springframework.util.ObjectUtils;
 
@@ -101,7 +103,7 @@ public final class BeanDefinitionBuilder {
 	 * @param beanClass the {@code Class} of the bean that the definition is being created for
 	 */
 	public static BeanDefinitionBuilder rootBeanDefinition(Class<?> beanClass) {
-		return rootBeanDefinition(beanClass, null);
+		return rootBeanDefinition(beanClass, (String) null);
 	}
 
 	/**
@@ -114,6 +116,30 @@ public final class BeanDefinitionBuilder {
 		builder.beanDefinition.setBeanClass(beanClass);
 		builder.beanDefinition.setFactoryMethodName(factoryMethodName);
 		return builder;
+	}
+
+	/**
+	 * Create a new {@code BeanDefinitionBuilder} used to construct a {@link RootBeanDefinition}.
+	 * @param beanType the {@link ResolvableType type} of the bean that the definition is being created for
+	 * @param instanceSupplier a callback for creating an instance of the bean
+	 * @since 5.3.9
+	 */
+	public static <T> BeanDefinitionBuilder rootBeanDefinition(ResolvableType beanType, Supplier<T> instanceSupplier) {
+		RootBeanDefinition beanDefinition = new RootBeanDefinition();
+		beanDefinition.setTargetType(beanType);
+		beanDefinition.setInstanceSupplier(instanceSupplier);
+		return new BeanDefinitionBuilder(beanDefinition);
+	}
+
+	/**
+	 * Create a new {@code BeanDefinitionBuilder} used to construct a {@link RootBeanDefinition}.
+	 * @param beanClass the {@code Class} of the bean that the definition is being created for
+	 * @param instanceSupplier a callback for creating an instance of the bean
+	 * @since 5.3.9
+	 * @see #rootBeanDefinition(ResolvableType, Supplier)
+	 */
+	public static <T> BeanDefinitionBuilder rootBeanDefinition(Class<T> beanClass, Supplier<T> instanceSupplier) {
+		return rootBeanDefinition(ResolvableType.forClass(beanClass), instanceSupplier);
 	}
 
 	/**
@@ -229,6 +255,17 @@ public final class BeanDefinitionBuilder {
 	}
 
 	/**
+	 * Add an autowired marker for the specified property on the specified bean.
+	 * @param name the name of the property to mark as autowired
+	 * @since 5.2
+	 * @see AutowiredPropertyMarker
+	 */
+	public BeanDefinitionBuilder addAutowiredProperty(String name) {
+		this.beanDefinition.getPropertyValues().add(name, AutowiredPropertyMarker.INSTANCE);
+		return this;
+	}
+
+	/**
 	 * Set the init method for this definition.
 	 */
 	public BeanDefinitionBuilder setInitMethodName(@Nullable String methodName) {
@@ -316,6 +353,16 @@ public final class BeanDefinitionBuilder {
 	 */
 	public BeanDefinitionBuilder setRole(int role) {
 		this.beanDefinition.setRole(role);
+		return this;
+	}
+
+	/**
+	 * Set whether this bean is 'synthetic', that is, not defined by
+	 * the application itself.
+	 * @since 5.3.9
+	 */
+	public BeanDefinitionBuilder setSynthetic(boolean synthetic) {
+		this.beanDefinition.setSynthetic(synthetic);
 		return this;
 	}
 

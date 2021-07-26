@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2018 the original author or authors.
+ * Copyright 2002-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -150,19 +150,21 @@ class CaptureVariablePathElement extends PathElement {
 	}
 
 
+	@Override
 	public String toString() {
 		return "CaptureVariable({" + this.variableName +
 				(this.constraintPattern != null ? ":" + this.constraintPattern.pattern() : "") + "})";
 	}
 
+	@Override
 	public char[] getChars() {
 		StringBuilder b = new StringBuilder();
-		b.append("{");
+		b.append('{');
 		b.append(this.variableName);
 		if (this.constraintPattern != null) {
-			b.append(":").append(this.constraintPattern.pattern());
+			b.append(':').append(this.constraintPattern.pattern());
 		}
-		b.append("}");
+		b.append('}');
 		return b.toString().toCharArray();
 	}
 

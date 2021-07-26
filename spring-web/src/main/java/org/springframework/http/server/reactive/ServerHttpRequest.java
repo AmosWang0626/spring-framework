@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,6 @@ package org.springframework.http.server.reactive;
 
 import java.net.InetSocketAddress;
 import java.net.URI;
-import java.util.Arrays;
 import java.util.function.Consumer;
 
 import org.springframework.http.HttpCookie;
@@ -49,9 +48,14 @@ public interface ServerHttpRequest extends HttpRequest, ReactiveHttpInputMessage
 	String getId();
 
 	/**
-	 * Returns a structured representation of the request path including the
-	 * context path + path within application portions, path segments with
-	 * encoded and decoded values, and path parameters.
+	 * Returns a structured representation of the full request path up to but
+	 * not including the {@link #getQueryParams() query}.
+	 * <p>The returned path is sub-divided into a
+	 * {@link RequestPath#contextPath()} portion and the remaining
+	 * {@link RequestPath#pathWithinApplication() pathWithinApplication} portion.
+	 * The latter can be passed into methods of
+	 * {@link org.springframework.web.util.pattern.PathPattern} for path
+	 * matching purposes.
 	 */
 	RequestPath getPath();
 
@@ -64,6 +68,15 @@ public interface ServerHttpRequest extends HttpRequest, ReactiveHttpInputMessage
 	 * Return a read-only map of cookies sent by the client.
 	 */
 	MultiValueMap<String, HttpCookie> getCookies();
+
+	/**
+	 * Return the local address the request was accepted on, if available.
+	 * @since 5.2.3
+	 */
+	@Nullable
+	default InetSocketAddress getLocalAddress() {
+		return null;
+	}
 
 	/**
 	 * Return the remote address where this request is connected to, if available.
@@ -139,29 +152,15 @@ public interface ServerHttpRequest extends HttpRequest, ReactiveHttpInputMessage
 		Builder contextPath(String contextPath);
 
 		/**
-		 * Add the given, single header value under the given name.
-		 * @param headerName the header name
-		 * @param headerValue the header value
-		 * @deprecated This method will be removed in Spring Framework 5.2 in
-		 * favor of {@link #header(String, String...)}.
-		 */
-		@Deprecated
-		Builder header(String headerName, String headerValue);
-
-		/**
 		 * Set or override the specified header values under the given name.
-		 * <p>If you need to set a single header value, you may invoke this
-		 * method with an explicit one-element array &mdash; for example,
-		 * <code>header("key", new String[] { "value" })</code> &mdash; or you
-		 * may choose to use {@link #headers(Consumer)} for greater control.
+		 * <p>If you need to add header values, remove headers, etc., use
+		 * {@link #headers(Consumer)} for greater control.
 		 * @param headerName the header name
 		 * @param headerValues the header values
 		 * @since 5.1.9
 		 * @see #headers(Consumer)
 		 */
-		default Builder header(String headerName, String... headerValues) {
-			return headers(httpHeaders -> httpHeaders.put(headerName, Arrays.asList(headerValues)));
-		}
+		Builder header(String headerName, String... headerValues);
 
 		/**
 		 * Manipulate request headers. The provided {@code HttpHeaders} contains
@@ -180,6 +179,12 @@ public interface ServerHttpRequest extends HttpRequest, ReactiveHttpInputMessage
 		 * @since 5.0.7
 		 */
 		Builder sslInfo(SslInfo sslInfo);
+
+		/**
+		 * Set the address of the remote client.
+		 * @since 5.3
+		 */
+		Builder remoteAddress(InetSocketAddress remoteAddress);
 
 		/**
 		 * Build a {@link ServerHttpRequest} decorator with the mutated properties.

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -54,8 +54,8 @@ public abstract class Operator extends SpelNodeImpl {
 	protected String rightActualDescriptor;
 
 
-	public Operator(String payload, int pos, SpelNodeImpl... operands) {
-		super(pos, operands);
+	public Operator(String payload, int startPos, int endPos, SpelNodeImpl... operands) {
+		super(startPos, endPos, operands);
 		this.operatorName = payload;
 	}
 
@@ -81,10 +81,10 @@ public abstract class Operator extends SpelNodeImpl {
 		StringBuilder sb = new StringBuilder("(");
 		sb.append(getChild(0).toStringAST());
 		for (int i = 1; i < getChildCount(); i++) {
-			sb.append(" ").append(getOperatorName()).append(" ");
+			sb.append(' ').append(getOperatorName()).append(' ');
 			sb.append(getChild(i).toStringAST());
 		}
-		sb.append(")");
+		sb.append(')');
 		return sb.toString();
 	}
 

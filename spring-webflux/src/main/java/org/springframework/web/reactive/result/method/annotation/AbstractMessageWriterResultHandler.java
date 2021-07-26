@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,19 +18,25 @@ package org.springframework.web.reactive.result.method.annotation;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 
+import org.springframework.core.KotlinDetector;
 import org.springframework.core.MethodParameter;
 import org.springframework.core.ReactiveAdapter;
 import org.springframework.core.ReactiveAdapterRegistry;
 import org.springframework.core.ResolvableType;
 import org.springframework.core.codec.Hints;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.codec.HttpMessageWriter;
+import org.springframework.http.converter.HttpMessageNotWritableException;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
+import org.springframework.util.CollectionUtils;
+import org.springframework.web.reactive.HandlerMapping;
 import org.springframework.web.reactive.accept.RequestedContentTypeResolver;
 import org.springframework.web.reactive.result.HandlerResultHandlerSupport;
 import org.springframework.web.server.NotAcceptableStatusException;
@@ -45,6 +51,8 @@ import org.springframework.web.server.ServerWebExchange;
  * @since 5.0
  */
 public abstract class AbstractMessageWriterResultHandler extends HandlerResultHandlerSupport {
+
+	private static final String COROUTINES_FLOW_CLASS_NAME = "kotlinx.coroutines.flow.Flow";
 
 	private final List<HttpMessageWriter<?>> messageWriters;
 
@@ -108,7 +116,7 @@ public abstract class AbstractMessageWriterResultHandler extends HandlerResultHa
 	 * @return indicates completion or error
 	 * @since 5.0.2
 	 */
-	@SuppressWarnings({"unchecked", "rawtypes"})
+	@SuppressWarnings({"unchecked", "rawtypes", "ConstantConditions"})
 	protected Mono<Void> writeBody(@Nullable Object body, MethodParameter bodyParameter,
 			@Nullable MethodParameter actualParam, ServerWebExchange exchange) {
 
@@ -118,22 +126,39 @@ public abstract class AbstractMessageWriterResultHandler extends HandlerResultHa
 
 		Publisher<?> publisher;
 		ResolvableType elementType;
+		ResolvableType actualElementType;
 		if (adapter != null) {
 			publisher = adapter.toPublisher(body);
-			ResolvableType genericType = bodyType.getGeneric();
+			boolean isUnwrapped = KotlinDetector.isSuspendingFunction(bodyParameter.getMethod()) &&
+					!COROUTINES_FLOW_CLASS_NAME.equals(bodyType.toClass().getName());
+			ResolvableType genericType = isUnwrapped ? bodyType : bodyType.getGeneric();
 			elementType = getElementType(adapter, genericType);
+			actualElementType = elementType;
 		}
 		else {
 			publisher = Mono.justOrEmpty(body);
-			elementType = (bodyType.toClass() == Object.class && body != null ?
-					ResolvableType.forInstance(body) : bodyType);
+			actualElementType = body != null ? ResolvableType.forInstance(body) : bodyType;
+			elementType = (bodyType.toClass() == Object.class && body != null ? actualElementType : bodyType);
 		}
 
 		if (elementType.resolve() == void.class || elementType.resolve() == Void.class) {
 			return Mono.from((Publisher<Void>) publisher);
 		}
 
-		MediaType bestMediaType = selectMediaType(exchange, () -> getMediaTypesFor(elementType));
+		MediaType bestMediaType;
+		try {
+			bestMediaType = selectMediaType(exchange, () -> getMediaTypesFor(elementType));
+		}
+		catch (NotAcceptableStatusException ex) {
+			HttpStatus statusCode = exchange.getResponse().getStatusCode();
+			if (statusCode != null && statusCode.isError()) {
+				if (logger.isDebugEnabled()) {
+					logger.debug("Ignoring error response content (if any). " + ex.getReason());
+				}
+				return Mono.empty();
+			}
+			throw ex;
+		}
 		if (bestMediaType != null) {
 			String logPrefix = exchange.getLogPrefix();
 			if (logger.isDebugEnabled()) {
@@ -141,7 +166,7 @@ public abstract class AbstractMessageWriterResultHandler extends HandlerResultHa
 						(publisher instanceof Mono ? "0..1" : "0..N") + " [" + elementType + "]");
 			}
 			for (HttpMessageWriter<?> writer : getMessageWriters()) {
-				if (writer.canWrite(elementType, bestMediaType)) {
+				if (writer.canWrite(actualElementType, bestMediaType)) {
 					return writer.write((Publisher) publisher, actualType, elementType,
 							bestMediaType, exchange.getRequest(), exchange.getResponse(),
 							Hints.from(Hints.LOG_PREFIX_HINT, logPrefix));
@@ -149,10 +174,19 @@ public abstract class AbstractMessageWriterResultHandler extends HandlerResultHa
 			}
 		}
 
+		MediaType contentType = exchange.getResponse().getHeaders().getContentType();
+		boolean isPresentMediaType = (contentType != null && contentType.equals(bestMediaType));
+		Set<MediaType> producibleTypes = exchange.getAttribute(HandlerMapping.PRODUCIBLE_MEDIA_TYPES_ATTRIBUTE);
+		if (isPresentMediaType || !CollectionUtils.isEmpty(producibleTypes)) {
+			return Mono.error(new HttpMessageNotWritableException(
+					"No Encoder for [" + elementType + "] with preset Content-Type '" + contentType + "'"));
+		}
+
 		List<MediaType> mediaTypes = getMediaTypesFor(elementType);
 		if (bestMediaType == null && mediaTypes.isEmpty()) {
 			return Mono.error(new IllegalStateException("No HttpMessageWriter for " + elementType));
 		}
+
 		return Mono.error(new NotAcceptableStatusException(mediaTypes));
 	}
 
@@ -172,7 +206,7 @@ public abstract class AbstractMessageWriterResultHandler extends HandlerResultHa
 		List<MediaType> writableMediaTypes = new ArrayList<>();
 		for (HttpMessageWriter<?> converter : getMessageWriters()) {
 			if (converter.canWrite(elementType, null)) {
-				writableMediaTypes.addAll(converter.getWritableMediaTypes());
+				writableMediaTypes.addAll(converter.getWritableMediaTypes(elementType));
 			}
 		}
 		return writableMediaTypes;

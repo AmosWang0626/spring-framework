@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,9 +26,11 @@ import org.reactivestreams.Publisher;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.core.ResolvableType;
 import org.springframework.core.ResolvableTypeProvider;
+import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.codec.multipart.Part;
 import org.springframework.lang.NonNull;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
@@ -36,11 +38,21 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 
 /**
- * Builder for the body of a multipart request, producing
- * {@code MultiValueMap<String, HttpEntity>}, which can be provided to the
- * {@code WebClient} through the {@code syncBody} method.
+ * Prepare the body of a multipart request, resulting in a
+ * {@code MultiValueMap<String, HttpEntity>}. Parts may be concrete values or
+ * via asynchronous types such as Reactor {@code Mono}, {@code Flux}, and
+ * others registered in the
+ * {@link org.springframework.core.ReactiveAdapterRegistry ReactiveAdapterRegistry}.
  *
- * Examples:
+ * <p>This builder is intended for use with the reactive
+ * {@link org.springframework.web.reactive.function.client.WebClient WebClient}.
+ * For multipart requests with the {@code RestTemplate}, simply create and
+ * populate a {@code MultiValueMap<String, HttpEntity>} as shown in the Javadoc for
+ * {@link org.springframework.http.converter.FormHttpMessageConverter FormHttpMessageConverter}
+ * and in the
+ * <a href="https://docs.spring.io/spring/docs/current/spring-framework-reference/integration.html#rest-template-multipart">reference docs</a>.
+ *
+ * <p>Below are examples of using this builder:
  * <pre class="code">
  *
  * // Add form field
@@ -64,7 +76,7 @@ import org.springframework.util.MultiValueMap;
  *
  * Mono&lt;Void&gt; result = webClient.post()
  *     .uri("...")
- *     .syncBody(multipartBody)
+ *     .body(multipartBody)
  *     .retrieve()
  *     .bodyToMono(Void.class)
  * </pre>
@@ -92,8 +104,9 @@ public final class MultipartBodyBuilder {
 	 * <li>String -- form field
 	 * <li>{@link org.springframework.core.io.Resource Resource} -- file part
 	 * <li>Object -- content to be encoded (e.g. to JSON)
-	 * <li>HttpEntity -- part content and headers although generally it's
-	 * easier to add headers through the returned builder</li>
+	 * <li>{@link HttpEntity} -- part content and headers although generally it's
+	 * easier to add headers through the returned builder
+	 * <li>{@link Part} -- a part from a server request
 	 * </ul>
 	 * @param name the name of the part to add
 	 * @param part the part data
@@ -114,10 +127,27 @@ public final class MultipartBodyBuilder {
 		Assert.hasLength(name, "'name' must not be empty");
 		Assert.notNull(part, "'part' must not be null");
 
-		if (part instanceof PublisherEntity<?,?>) {
-			PublisherPartBuilder<?, ?> builder = new PublisherPartBuilder<>((PublisherEntity<?, ?>) part);
+		if (part instanceof Part) {
+			Part partObject = (Part) part;
+			PartBuilder builder = asyncPart(name, partObject.content(), DataBuffer.class);
+			if (!partObject.headers().isEmpty()) {
+				builder.headers(headers -> {
+					headers.putAll(partObject.headers());
+					String filename = headers.getContentDisposition().getFilename();
+					// reset to parameter name
+					headers.setContentDispositionFormData(name, filename);
+				});
+			}
 			if (contentType != null) {
-				builder.header(HttpHeaders.CONTENT_TYPE, contentType.toString());
+				builder.contentType(contentType);
+			}
+			return builder;
+		}
+
+		if (part instanceof PublisherEntity<?,?>) {
+			PublisherPartBuilder<?, ?> builder = new PublisherPartBuilder<>(name, (PublisherEntity<?, ?>) part);
+			if (contentType != null) {
+				builder.contentType(contentType);
 			}
 			this.parts.add(name, builder);
 			return builder;
@@ -141,9 +171,9 @@ public final class MultipartBodyBuilder {
 							" or MultipartBodyBuilder.PublisherEntity");
 		}
 
-		DefaultPartBuilder builder = new DefaultPartBuilder(partHeaders, partBody);
+		DefaultPartBuilder builder = new DefaultPartBuilder(name, partHeaders, partBody);
 		if (contentType != null) {
-			builder.header(HttpHeaders.CONTENT_TYPE, contentType.toString());
+			builder.contentType(contentType);
 		}
 		this.parts.add(name, builder);
 		return builder;
@@ -152,7 +182,7 @@ public final class MultipartBodyBuilder {
 	/**
 	 * Add a part from {@link Publisher} content.
 	 * @param name the name of the part to add
-	 * @param publisher the part contents
+	 * @param publisher a Publisher of content for the part
 	 * @param elementClass the type of elements contained in the publisher
 	 * @return builder that allows for further customization of part headers
 	 */
@@ -161,10 +191,9 @@ public final class MultipartBodyBuilder {
 		Assert.notNull(publisher, "'publisher' must not be null");
 		Assert.notNull(elementClass, "'elementClass' must not be null");
 
-		PublisherPartBuilder<T, P> builder = new PublisherPartBuilder<>(null, publisher, elementClass);
+		PublisherPartBuilder<T, P> builder = new PublisherPartBuilder<>(name, null, publisher, elementClass);
 		this.parts.add(name, builder);
 		return builder;
-
 	}
 
 	/**
@@ -182,7 +211,7 @@ public final class MultipartBodyBuilder {
 		Assert.notNull(publisher, "'publisher' must not be null");
 		Assert.notNull(typeReference, "'typeReference' must not be null");
 
-		PublisherPartBuilder<T, P> builder = new PublisherPartBuilder<>(null, publisher, typeReference);
+		PublisherPartBuilder<T, P> builder = new PublisherPartBuilder<>(name, null, publisher, typeReference);
 		this.parts.add(name, builder);
 		return builder;
 	}
@@ -208,6 +237,24 @@ public final class MultipartBodyBuilder {
 	public interface PartBuilder {
 
 		/**
+		 * Set the {@linkplain MediaType media type} of the part.
+		 * @param contentType the content type
+		 * @since 5.2
+		 * @see HttpHeaders#setContentType(MediaType)
+		 */
+		PartBuilder contentType(MediaType contentType);
+
+		/**
+		 * Set the filename parameter for a file part. This should not be
+		 * necessary with {@link org.springframework.core.io.Resource Resource}
+		 * based parts that expose a filename but may be useful for
+		 * {@link Publisher} parts.
+		 * @param filename the filename to set on the Content-Disposition
+		 * @since 5.2
+		 */
+		PartBuilder filename(String filename);
+
+		/**
 		 * Add part header values.
 		 * @param headerName the part header name
 		 * @param headerValues the part header value(s)
@@ -227,15 +274,30 @@ public final class MultipartBodyBuilder {
 
 	private static class DefaultPartBuilder implements PartBuilder {
 
+		private final String name;
+
 		@Nullable
 		protected HttpHeaders headers;
 
 		@Nullable
 		protected final Object body;
 
-		public DefaultPartBuilder(@Nullable HttpHeaders headers, @Nullable Object body) {
+		public DefaultPartBuilder(String name, @Nullable HttpHeaders headers, @Nullable Object body) {
+			this.name = name;
 			this.headers = headers;
 			this.body = body;
+		}
+
+		@Override
+		public PartBuilder contentType(MediaType contentType) {
+			initHeadersIfNecessary().setContentType(contentType);
+			return this;
+		}
+
+		@Override
+		public PartBuilder filename(String filename) {
+			initHeadersIfNecessary().setContentDispositionFormData(this.name, filename);
+			return this;
 		}
 
 		@Override
@@ -267,18 +329,20 @@ public final class MultipartBodyBuilder {
 
 		private final ResolvableType resolvableType;
 
-		public PublisherPartBuilder(@Nullable HttpHeaders headers, P body, Class<S> elementClass) {
-			super(headers, body);
+		public PublisherPartBuilder(String name, @Nullable HttpHeaders headers, P body, Class<S> elementClass) {
+			super(name, headers, body);
 			this.resolvableType = ResolvableType.forClass(elementClass);
 		}
 
-		public PublisherPartBuilder(@Nullable HttpHeaders headers, P body, ParameterizedTypeReference<S> typeRef) {
-			super(headers, body);
+		public PublisherPartBuilder(String name, @Nullable HttpHeaders headers, P body,
+				ParameterizedTypeReference<S> typeRef) {
+
+			super(name, headers, body);
 			this.resolvableType = ResolvableType.forType(typeRef);
 		}
 
-		public PublisherPartBuilder(PublisherEntity<S, P> other) {
-			super(other.getHeaders(), other.getBody());
+		public PublisherPartBuilder(String name, PublisherEntity<S, P> other) {
+			super(name, other.getHeaders(), other.getBody());
 			this.resolvableType = other.getResolvableType();
 		}
 

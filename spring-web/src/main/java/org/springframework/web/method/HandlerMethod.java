@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.StringJoiner;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -28,13 +29,15 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import org.springframework.beans.factory.BeanFactory;
+import org.springframework.context.MessageSource;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.core.BridgeMethodResolver;
-import org.springframework.core.GenericTypeResolver;
 import org.springframework.core.MethodParameter;
 import org.springframework.core.ResolvableType;
 import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.core.annotation.SynthesizingMethodParameter;
 import org.springframework.http.HttpStatus;
+import org.springframework.lang.NonNull;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
@@ -62,12 +65,15 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 public class HandlerMethod {
 
 	/** Logger that is available to subclasses. */
-	protected final Log logger = LogFactory.getLog(getClass());
+	protected static final Log logger = LogFactory.getLog(HandlerMethod.class);
 
 	private final Object bean;
 
 	@Nullable
 	private final BeanFactory beanFactory;
+
+	@Nullable
+	private final MessageSource messageSource;
 
 	private final Class<?> beanType;
 
@@ -89,6 +95,8 @@ public class HandlerMethod {
 	@Nullable
 	private volatile List<Annotation[][]> interfaceParameterAnnotations;
 
+	private final String description;
+
 
 	/**
 	 * Create an instance from a bean instance and a method.
@@ -98,11 +106,13 @@ public class HandlerMethod {
 		Assert.notNull(method, "Method is required");
 		this.bean = bean;
 		this.beanFactory = null;
+		this.messageSource = null;
 		this.beanType = ClassUtils.getUserClass(bean);
 		this.method = method;
 		this.bridgedMethod = BridgeMethodResolver.findBridgedMethod(method);
 		this.parameters = initMethodParameters();
 		evaluateResponseStatus();
+		this.description = initDescription(this.beanType, this.method);
 	}
 
 	/**
@@ -114,11 +124,13 @@ public class HandlerMethod {
 		Assert.notNull(methodName, "Method name is required");
 		this.bean = bean;
 		this.beanFactory = null;
+		this.messageSource = null;
 		this.beanType = ClassUtils.getUserClass(bean);
 		this.method = bean.getClass().getMethod(methodName, parameterTypes);
 		this.bridgedMethod = BridgeMethodResolver.findBridgedMethod(this.method);
 		this.parameters = initMethodParameters();
 		evaluateResponseStatus();
+		this.description = initDescription(this.beanType, this.method);
 	}
 
 	/**
@@ -127,11 +139,23 @@ public class HandlerMethod {
 	 * re-create the {@code HandlerMethod} with an initialized bean.
 	 */
 	public HandlerMethod(String beanName, BeanFactory beanFactory, Method method) {
+		this(beanName, beanFactory, null, method);
+	}
+
+	/**
+	 * Variant of {@link #HandlerMethod(String, BeanFactory, Method)} that
+	 * also accepts a {@link MessageSource}.
+	 */
+	public HandlerMethod(
+			String beanName, BeanFactory beanFactory,
+			@Nullable MessageSource messageSource, Method method) {
+
 		Assert.hasText(beanName, "Bean name is required");
 		Assert.notNull(beanFactory, "BeanFactory is required");
 		Assert.notNull(method, "Method is required");
 		this.bean = beanName;
 		this.beanFactory = beanFactory;
+		this.messageSource = messageSource;
 		Class<?> beanType = beanFactory.getType(beanName);
 		if (beanType == null) {
 			throw new IllegalStateException("Cannot resolve bean type for bean with name '" + beanName + "'");
@@ -141,6 +165,7 @@ public class HandlerMethod {
 		this.bridgedMethod = BridgeMethodResolver.findBridgedMethod(method);
 		this.parameters = initMethodParameters();
 		evaluateResponseStatus();
+		this.description = initDescription(this.beanType, this.method);
 	}
 
 	/**
@@ -150,12 +175,14 @@ public class HandlerMethod {
 		Assert.notNull(handlerMethod, "HandlerMethod is required");
 		this.bean = handlerMethod.bean;
 		this.beanFactory = handlerMethod.beanFactory;
+		this.messageSource = handlerMethod.messageSource;
 		this.beanType = handlerMethod.beanType;
 		this.method = handlerMethod.method;
 		this.bridgedMethod = handlerMethod.bridgedMethod;
 		this.parameters = handlerMethod.parameters;
 		this.responseStatus = handlerMethod.responseStatus;
 		this.responseStatusReason = handlerMethod.responseStatusReason;
+		this.description = handlerMethod.description;
 		this.resolvedFromHandlerMethod = handlerMethod.resolvedFromHandlerMethod;
 	}
 
@@ -167,6 +194,7 @@ public class HandlerMethod {
 		Assert.notNull(handler, "Handler object is required");
 		this.bean = handler;
 		this.beanFactory = handlerMethod.beanFactory;
+		this.messageSource = handlerMethod.messageSource;
 		this.beanType = handlerMethod.beanType;
 		this.method = handlerMethod.method;
 		this.bridgedMethod = handlerMethod.bridgedMethod;
@@ -174,15 +202,14 @@ public class HandlerMethod {
 		this.responseStatus = handlerMethod.responseStatus;
 		this.responseStatusReason = handlerMethod.responseStatusReason;
 		this.resolvedFromHandlerMethod = handlerMethod;
+		this.description = handlerMethod.description;
 	}
 
 	private MethodParameter[] initMethodParameters() {
 		int count = this.bridgedMethod.getParameterCount();
 		MethodParameter[] result = new MethodParameter[count];
 		for (int i = 0; i < count; i++) {
-			HandlerMethodParameter parameter = new HandlerMethodParameter(i);
-			GenericTypeResolver.resolveParameterType(parameter, this.beanType);
-			result[i] = parameter;
+			result[i] = new HandlerMethodParameter(i);
 		}
 		return result;
 	}
@@ -193,9 +220,22 @@ public class HandlerMethod {
 			annotation = AnnotatedElementUtils.findMergedAnnotation(getBeanType(), ResponseStatus.class);
 		}
 		if (annotation != null) {
+			String reason = annotation.reason();
+			String resolvedReason = (StringUtils.hasText(reason) && this.messageSource != null ?
+					this.messageSource.getMessage(reason, null, reason, LocaleContextHolder.getLocale()) :
+					reason);
+
 			this.responseStatus = annotation.code();
-			this.responseStatusReason = annotation.reason();
+			this.responseStatusReason = resolvedReason;
 		}
+	}
+
+	private static String initDescription(Class<?> beanType, Method method) {
+		StringJoiner joiner = new StringJoiner(", ", "(", ")");
+		for (Class<?> paramType : method.getParameterTypes()) {
+			joiner.add(paramType.getSimpleName());
+		}
+		return beanType.getName() + "#" + method.getName() + joiner.toString();
 	}
 
 
@@ -339,7 +379,7 @@ public class HandlerMethod {
 		List<Annotation[][]> parameterAnnotations = this.interfaceParameterAnnotations;
 		if (parameterAnnotations == null) {
 			parameterAnnotations = new ArrayList<>();
-			for (Class<?> ifc : this.method.getDeclaringClass().getInterfaces()) {
+			for (Class<?> ifc : ClassUtils.getAllInterfacesForClassAsSet(this.method.getDeclaringClass())) {
 				for (Method candidate : ifc.getMethods()) {
 					if (isOverrideFor(candidate)) {
 						parameterAnnotations.add(candidate.getParameterAnnotations());
@@ -371,7 +411,7 @@ public class HandlerMethod {
 
 
 	@Override
-	public boolean equals(Object other) {
+	public boolean equals(@Nullable Object other) {
 		if (this == other) {
 			return true;
 		}
@@ -389,7 +429,7 @@ public class HandlerMethod {
 
 	@Override
 	public String toString() {
-		return this.method.toGenericString();
+		return this.description;
 	}
 
 
@@ -458,6 +498,12 @@ public class HandlerMethod {
 
 		protected HandlerMethodParameter(HandlerMethodParameter original) {
 			super(original);
+		}
+
+		@Override
+		@NonNull
+		public Method getMethod() {
+			return HandlerMethod.this.bridgedMethod;
 		}
 
 		@Override
