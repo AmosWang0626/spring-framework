@@ -1,7 +1,7 @@
 package com.amos.base.factory.bean;
 
 /**
- * DESCRIPTION: CustomService
+ * CustomService
  *
  * @author <a href="mailto:daoyuan0626@gmail.com">amos.wang</a>
  * @date 2020/4/12

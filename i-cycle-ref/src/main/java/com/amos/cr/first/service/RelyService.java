@@ -6,7 +6,7 @@ import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 
 /**
- * DESCRIPTION: RelyService
+ * RelyService
  *
  * @author amos.wang
  * @date 2020/3/24 13:34

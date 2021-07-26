@@ -9,7 +9,7 @@ import javax.servlet.ServletException;
 import javax.servlet.ServletRegistration;
 
 /**
- * DESCRIPTION: IBootInitializer
+ * IBootInitializer
  * <p>
  * Servlet 3.1 之后提供了 resources\META-INF\services\javax.servlet.ServletContainerInitializer
  * 这个方法会自动扫描 WebApplicationInitializer 的实现类

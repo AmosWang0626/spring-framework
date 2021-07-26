@@ -7,7 +7,7 @@ import com.amos.base.service.ProtoTypeService;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
 /**
- * DESCRIPTION: LazyScopeTest
+ * LazyScopeTest
  *
  * @author <a href="mailto:daoyuan0626@gmail.com">amos.wang</a>
  * @date 2020/4/12

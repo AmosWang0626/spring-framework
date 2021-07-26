@@ -6,7 +6,7 @@ import com.amos.aop.service.RelyService;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
 /**
- * DESCRIPTION: AOP
+ * AOP
  *
  * @author <a href="mailto:daoyuan0626@gmail.com">amos.wang</a>
  * @date 2020/4/12

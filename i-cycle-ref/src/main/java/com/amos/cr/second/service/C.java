@@ -6,7 +6,7 @@ import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 
 /**
- * DESCRIPTION: C
+ * C
  *
  * @author amos.wang
  * @date 2020/4/14 23:00

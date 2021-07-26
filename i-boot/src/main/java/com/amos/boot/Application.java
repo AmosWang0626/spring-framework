@@ -10,7 +10,7 @@ import org.springframework.web.servlet.DispatcherServlet;
 import javax.servlet.ServletException;
 
 /**
- * DESCRIPTION: Tomcat
+ * Tomcat
  *
  * @author <a href="mailto:daoyuan0626@gmail.com">amos.wang</a>
  * @date 2020/7/4
