@@ -1,7 +1,7 @@
-package com.amos.base.test_1.service.impl;
+package com.amos.base.test_share_impl.service.impl;
 
-import com.amos.base.test_1.service.DocReadService;
-import com.amos.base.test_1.service.DocWriteService;
+import com.amos.base.test_share_impl.service.DocReadService;
+import com.amos.base.test_share_impl.service.DocWriteService;
 import org.springframework.stereotype.Service;
 
 /**

@@ -1,7 +1,8 @@
-package com.amos.base.test_1;
+package com.amos.base.test_share_impl;
 
-import com.amos.base.test_1.service.DocReadService;
-import com.amos.base.test_1.service.DocWriteService;
+import com.amos.base.test_share_impl.config.TestShareImplConfig;
+import com.amos.base.test_share_impl.service.DocReadService;
+import com.amos.base.test_share_impl.service.DocWriteService;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
 /**
@@ -14,7 +15,7 @@ public class TwoServiceOneImplTest {
 
 	public static void main(String[] args) {
 		AnnotationConfigApplicationContext context =
-				new AnnotationConfigApplicationContext(Test1Config.class);
+				new AnnotationConfigApplicationContext(TestShareImplConfig.class);
 		System.out.println("Spring Bean 默认初始化完成");
 		System.out.println(context.getBean(DocReadService.class));
 		System.out.println(context.getBean(DocWriteService.class));

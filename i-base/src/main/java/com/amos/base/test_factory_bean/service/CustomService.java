@@ -1,4 +1,4 @@
-package com.amos.base.factory.bean;
+package com.amos.base.test_factory_bean.service;
 
 /**
  * CustomService

@@ -1,4 +1,4 @@
-package com.amos.base.test_1.service;
+package com.amos.base.test_share_impl.service;
 
 /**
  * read

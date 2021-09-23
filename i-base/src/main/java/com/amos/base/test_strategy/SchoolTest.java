@@ -1,4 +1,4 @@
-package com.amos.base;
+package com.amos.base.test_strategy;
 
 import com.amos.base.config.AppConfig;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;

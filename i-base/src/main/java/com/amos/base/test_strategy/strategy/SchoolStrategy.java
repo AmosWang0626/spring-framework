@@ -1,4 +1,4 @@
-package com.amos.base.strategy;
+package com.amos.base.test_strategy.strategy;
 
 /**
  * 模块名称: spring

@@ -1,7 +1,8 @@
-package com.amos.base;
+package com.amos.base.test_factory_bean;
 
 import com.amos.base.config.AppConfig;
-import com.amos.base.factory.bean.CustomService;
+import com.amos.base.test_factory_bean.bean.CustomBeanFactoryPostProcessor;
+import com.amos.base.test_factory_bean.service.CustomService;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
 /**
@@ -17,7 +18,7 @@ public class BeanFactoryPostProcessorTest {
 	/**
 	 * 偷梁换柱
 	 *
-	 * @see com.amos.base.custom.CustomBeanFactoryPostProcessor
+	 * @see CustomBeanFactoryPostProcessor
 	 */
 	public static void main(String[] args) {
 		AnnotationConfigApplicationContext context =

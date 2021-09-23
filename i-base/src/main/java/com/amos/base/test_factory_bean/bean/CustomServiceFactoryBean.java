@@ -1,5 +1,6 @@
-package com.amos.base.factory.bean;
+package com.amos.base.test_factory_bean.bean;
 
+import com.amos.base.test_factory_bean.service.CustomService;
 import org.springframework.beans.factory.FactoryBean;
 import org.springframework.stereotype.Component;
 
@@ -10,7 +11,7 @@ import org.springframework.stereotype.Component;
  * @author amos.wang
  * @date 2020/4/7 16:56
  */
-//@Component
+@Component
 public class CustomServiceFactoryBean implements FactoryBean<CustomService> {
 
 	@Override

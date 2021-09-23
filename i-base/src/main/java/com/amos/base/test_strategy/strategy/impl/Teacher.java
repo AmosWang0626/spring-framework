@@ -1,6 +1,6 @@
-package com.amos.base.strategy.impl;
+package com.amos.base.test_strategy.strategy.impl;
 
-import com.amos.base.strategy.SchoolStrategy;
+import com.amos.base.test_strategy.strategy.SchoolStrategy;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;

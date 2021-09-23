@@ -1,6 +1,6 @@
-package com.amos.base.custom;
+package com.amos.base.test_factory_bean.bean;
 
-import com.amos.base.factory.bean.CustomService;
+import com.amos.base.test_factory_bean.service.CustomService;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
