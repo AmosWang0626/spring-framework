@@ -8,6 +8,6 @@ import org.springframework.context.annotation.ComponentScan;
  * @author amos.wang
  * @date 2020/3/24 13:17
  */
-@ComponentScan("com.amos.base")
+@ComponentScan("com.amos.base.service")
 public class AppConfig {
 }
