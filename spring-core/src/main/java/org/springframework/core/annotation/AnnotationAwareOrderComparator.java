@@ -65,6 +65,7 @@ public class AnnotationAwareOrderComparator extends OrderComparator {
 		if (order != null) {
 			return order;
 		}
+		// 从注解里获取@Order的值
 		return findOrderFromAnnotation(obj);
 	}
 
